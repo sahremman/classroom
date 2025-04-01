@@ -3,84 +3,571 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class Manager</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Classroom Manager</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section {
+            background-color: white;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            background-color: #ddd;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+            cursor: pointer;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 2px solid #3498db;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-    <nav>
-        <div class="logo">ClassManager</div>
-        <ul>
-            <li><a href="index.html" class="active">Dashboard</a></li>
-            <li><a href="soil-chemistry.html">Environmental Soil Chemistry</a></li>
-            <li><a href="sustainable-dev.html">Sustainable Development</a></li>
-        </ul>
-    </nav>
-
-    <main>
-        <h1>Welcome to Your Class Manager</h1>
+    <div class="container">
+        <h1>Class Manager</h1>
         
-        <div class="dashboard">
-            <div class="dashboard-card">
-                <h2>Environmental Soil Chemistry</h2>
-                <p>Students enrolled: <span id="soil-students-count">0</span></p>
-                <a href="soil-chemistry.html" class="btn">Manage Class</a>
+        <div class="tabs">
+            <div class="tab active" onclick="openTab('dashboard')">Dashboard</div>
+            <div class="tab" onclick="openTab('soil-chemistry')">Environmental Soil Chemistry</div>
+            <div class="tab" onclick="openTab('sustainable-dev')">Sustainable Development</div>
+        </div>
+        
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="section">
+                <h2>Classes Overview</h2>
+                <p>Environmental Soil Chemistry: <span id="soil-students-count">0</span> students</p>
+                <p>Sustainable Development: <span id="sust-students-count">0</span> students</p>
+                <button onclick="exportStudentData()" class="btn">Export Student Data</button>
             </div>
             
-            <div class="dashboard-card">
-                <h2>Sustainable Development</h2>
-                <p>Students enrolled: <span id="sust-students-count">0</span></p>
-                <a href="sustainable-dev.html" class="btn">Manage Class</a>
-            </div>
-            
-            <div class="dashboard-card">
-                <h2>Quick Actions</h2>
-                <button id="add-student-btn" class="btn">Add Student</button>
-                <button id="export-data-btn" class="btn">Export Data</button>
-            </div>
-            
-            <div class="dashboard-card">
-                <h2>Students</h2>
-                <div id="all-students-list">
-                    <p>No students added yet.</p>
-                </div>
+            <div class="section">
+                <h2>Add Student</h2>
+                <form id="add-student-form">
+                    <input type="text" id="student-name" placeholder="Student Name" required>
+                    <input type="email" id="student-email" placeholder="Email Address" required>
+                    <div>
+                        <label>
+                            <input type="checkbox" id="soil-class"> Environmental Soil Chemistry
+                        </label>
+                    </div>
+                    <div>
+                        <label>
+                            <input type="checkbox" id="sust-class"> Sustainable Development
+                        </label>
+                    </div>
+                    <button type="submit" class="btn">Add Student</button>
+                </form>
             </div>
         </div>
-    </main>
-
-    <!-- Add Student Modal -->
-    <div id="add-student-modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Add New Student</h2>
-            <form id="add-student-form">
-                <div class="form-group">
-                    <label for="student-name">Full Name:</label>
-                    <input type="text" id="student-name" required>
-                </div>
-                <div class="form-group">
-                    <label for="student-email">Email:</label>
-                    <input type="email" id="student-email" required>
-                </div>
-                <div class="form-group">
-                    <label>Class:</label>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="soil-class" value="soil-chemistry">
-                        <label for="soil-class">Environmental Soil Chemistry</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="sust-class" value="sustainable-dev">
-                        <label for="sust-class">Sustainable Development</label>
-                    </div>
-                </div>
-                <button type="submit" class="btn">Add Student</button>
-            </form>
+        
+        <!-- Soil Chemistry Tab -->
+        <div id="soil-chemistry" class="tab-content">
+            <div class="section">
+                <h2>Environmental Soil Chemistry</h2>
+                <p>Schedule: Mondays and Thursdays, 10:00 AM - 11:30 AM</p>
+                <p>Location: Science Building, Room 305</p>
+            </div>
+            
+            <div class="section">
+                <h2>Students</h2>
+                <input type="text" id="soil-search" placeholder="Search students..." onkeyup="searchStudents('soil-chemistry')">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="soil-chemistry-students">
+                        <!-- Students will be listed here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="section">
+                <h2>Add Assignment</h2>
+                <form id="add-soil-assignment-form">
+                    <input type="text" id="soil-assignment-title" placeholder="Assignment Title" required>
+                    <input type="date" id="soil-assignment-due" required>
+                    <textarea id="soil-assignment-desc" placeholder="Assignment Description" rows="3"></textarea>
+                    <button type="submit" class="btn">Add Assignment</button>
+                </form>
+            </div>
+            
+            <div class="section">
+                <h2>Assignments</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Due Date</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="soil-chemistry-assignments">
+                        <!-- Assignments will be listed here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Sustainable Development Tab -->
+        <div id="sustainable-dev" class="tab-content">
+            <div class="section">
+                <h2>Sustainable Development</h2>
+                <p>Schedule: Wednesdays and Fridays, 2:00 PM - 3:30 PM</p>
+                <p>Location: Earth Sciences Building, Room 210</p>
+            </div>
+            
+            <div class="section">
+                <h2>Students</h2>
+                <input type="text" id="sust-search" placeholder="Search students..." onkeyup="searchStudents('sustainable-dev')">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sustainable-dev-students">
+                        <!-- Students will be listed here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="section">
+                <h2>Add Assignment</h2>
+                <form id="add-sust-assignment-form">
+                    <input type="text" id="sust-assignment-title" placeholder="Assignment Title" required>
+                    <input type="date" id="sust-assignment-due" required>
+                    <textarea id="sust-assignment-desc" placeholder="Assignment Description" rows="3"></textarea>
+                    <button type="submit" class="btn">Add Assignment</button>
+                </form>
+            </div>
+            
+            <div class="section">
+                <h2>Assignments</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Due Date</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sustainable-dev-assignments">
+                        <!-- Assignments will be listed here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <footer>
-        <p>&copy; 2025 ClassManager</p>
-    </footer>
-
-    <script src="app.js"></script>
+    <script>
+        // Storage keys
+        const STUDENTS_KEY = 'classroom_students';
+        const ASSIGNMENTS_KEY = 'classroom_assignments';
+        
+        // Initialize data
+        function initData() {
+            if (!localStorage.getItem(STUDENTS_KEY)) {
+                localStorage.setItem(STUDENTS_KEY, JSON.stringify([]));
+            }
+            if (!localStorage.getItem(ASSIGNMENTS_KEY)) {
+                localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify([]));
+            }
+        }
+        
+        // Get data from localStorage
+        function getData(key) {
+            return JSON.parse(localStorage.getItem(key)) || [];
+        }
+        
+        // Save data to localStorage
+        function saveData(key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+        
+        // Generate unique ID
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+        
+        // Format date
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString();
+        }
+        
+        // Tab navigation
+        function openTab(tabId) {
+            // Hide all tab contents
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+            
+            // Deactivate all tabs
+            const tabs = document.getElementsByClassName('tab');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            // Activate selected tab
+            document.getElementById(tabId).classList.add('active');
+            
+            // Find the tab button and activate it
+            const tabBtns = document.getElementsByClassName('tab');
+            for (let i = 0; i < tabBtns.length; i++) {
+                if (tabBtns[i].getAttribute('onclick').includes(tabId)) {
+                    tabBtns[i].classList.add('active');
+                }
+            }
+        }
+        
+        // Add a student
+        function addStudent(name, email, classes) {
+            const students = getData(STUDENTS_KEY);
+            
+            const newStudent = {
+                id: generateId(),
+                name: name,
+                email: email,
+                classes: classes
+            };
+            
+            students.push(newStudent);
+            saveData(STUDENTS_KEY, students);
+            
+            updateStudentCounts();
+            renderStudentLists();
+            
+            // Reset form
+            document.getElementById('student-name').value = '';
+            document.getElementById('student-email').value = '';
+            document.getElementById('soil-class').checked = false;
+            document.getElementById('sust-class').checked = false;
+        }
+        
+        // Add assignment
+        function addAssignment(title, dueDate, description, classType) {
+            const assignments = getData(ASSIGNMENTS_KEY);
+            
+            const newAssignment = {
+                id: generateId(),
+                title: title,
+                dueDate: dueDate,
+                description: description,
+                classType: classType
+            };
+            
+            assignments.push(newAssignment);
+            saveData(ASSIGNMENTS_KEY, assignments);
+            
+            renderAssignmentList(classType);
+        }
+        
+        // Delete student
+        function deleteStudent(studentId) {
+            if (!confirm('Are you sure you want to delete this student?')) return;
+            
+            const students = getData(STUDENTS_KEY);
+            const updatedStudents = students.filter(student => student.id !== studentId);
+            
+            saveData(STUDENTS_KEY, updatedStudents);
+            updateStudentCounts();
+            renderStudentLists();
+        }
+        
+        // Delete assignment
+        function deleteAssignment(assignmentId) {
+            if (!confirm('Are you sure you want to delete this assignment?')) return;
+            
+            const assignments = getData(ASSIGNMENTS_KEY);
+            const assignment = assignments.find(a => a.id === assignmentId);
+            const classType = assignment ? assignment.classType : null;
+            
+            const updatedAssignments = assignments.filter(a => a.id !== assignmentId);
+            saveData(ASSIGNMENTS_KEY, updatedAssignments);
+            
+            if (classType) {
+                renderAssignmentList(classType);
+            }
+        }
+        
+        // Update student counts
+        function updateStudentCounts() {
+            const students = getData(STUDENTS_KEY);
+            
+            const soilCount = students.filter(s => s.classes.includes('soil-chemistry')).length;
+            const sustCount = students.filter(s => s.classes.includes('sustainable-dev')).length;
+            
+            document.getElementById('soil-students-count').textContent = soilCount;
+            document.getElementById('sust-students-count').textContent = sustCount;
+        }
+        
+        // Render student lists
+        function renderStudentLists() {
+            renderStudentList('soil-chemistry');
+            renderStudentList('sustainable-dev');
+        }
+        
+        // Render a specific student list
+        function renderStudentList(classType) {
+            const tableBody = document.getElementById(`${classType}-students`);
+            if (!tableBody) return;
+            
+            const students = getData(STUDENTS_KEY).filter(s => s.classes.includes(classType));
+            
+            if (students.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3">No students enrolled</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            students.forEach(student => {
+                html += `
+                    <tr>
+                        <td>${student.name}</td>
+                        <td>${student.email}</td>
+                        <td>
+                            <button class="btn" onclick="deleteStudent('${student.id}')">Remove</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableBody.innerHTML = html;
+        }
+        
+        // Render assignment lists
+        function renderAssignmentLists() {
+            renderAssignmentList('soil-chemistry');
+            renderAssignmentList('sustainable-dev');
+        }
+        
+        // Render a specific assignment list
+        function renderAssignmentList(classType) {
+            const tableBody = document.getElementById(`${classType}-assignments`);
+            if (!tableBody) return;
+            
+            const assignments = getData(ASSIGNMENTS_KEY).filter(a => a.classType === classType);
+            
+            if (assignments.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4">No assignments yet</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            assignments.forEach(assignment => {
+                html += `
+                    <tr>
+                        <td>${assignment.title}</td>
+                        <td>${formatDate(assignment.dueDate)}</td>
+                        <td>${assignment.description}</td>
+                        <td>
+                            <button class="btn" onclick="deleteAssignment('${assignment.id}')">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableBody.innerHTML = html;
+        }
+        
+        // Search students
+        function searchStudents(classType) {
+            const searchInput = document.getElementById(`${classType === 'soil-chemistry' ? 'soil' : 'sust'}-search`);
+            if (!searchInput) return;
+            
+            const searchTerm = searchInput.value.toLowerCase();
+            const students = getData(STUDENTS_KEY).filter(student => 
+                student.classes.includes(classType) && 
+                (student.name.toLowerCase().includes(searchTerm) || 
+                 student.email.toLowerCase().includes(searchTerm))
+            );
+            
+            const tableBody = document.getElementById(`${classType}-students`);
+            if (!tableBody) return;
+            
+            if (students.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3">No students match your search</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            students.forEach(student => {
+                html += `
+                    <tr>
+                        <td>${student.name}</td>
+                        <td>${student.email}</td>
+                        <td>
+                            <button class="btn" onclick="deleteStudent('${student.id}')">Remove</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableBody.innerHTML = html;
+        }
+        
+        // Export student data
+        function exportStudentData() {
+            const students = getData(STUDENTS_KEY);
+            
+            if (students.length === 0) {
+                alert('No students to export');
+                return;
+            }
+            
+            let csvContent = "Name,Email,Classes\n";
+            
+            students.forEach(student => {
+                const classes = student.classes.map(c => 
+                    c === 'soil-chemistry' ? 'Environmental Soil Chemistry' : 'Sustainable Development'
+                ).join('; ');
+                
+                csvContent += `${student.name},${student.email},"${classes}"\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'students.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Initialize
+        window.onload = function() {
+            initData();
+            updateStudentCounts();
+            renderStudentLists();
+            renderAssignmentLists();
+            
+            // Add Student Form
+            document.getElementById('add-student-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('student-name').value;
+                const email = document.getElementById('student-email').value;
+                const classes = [];
+                
+                if (document.getElementById('soil-class').checked) {
+                    classes.push('soil-chemistry');
+                }
+                if (document.getElementById('sust-class').checked) {
+                    classes.push('sustainable-dev');
+                }
+                
+                if (classes.length === 0) {
+                    alert('Please select at least one class');
+                    return;
+                }
+                
+                addStudent(name, email, classes);
+            });
+            
+            // Add Soil Chemistry Assignment Form
+            document.getElementById('add-soil-assignment-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const title = document.getElementById('soil-assignment-title').value;
+                const dueDate = document.getElementById('soil-assignment-due').value;
+                const description = document.getElementById('soil-assignment-desc').value;
+                
+                addAssignment(title, dueDate, description, 'soil-chemistry');
+                
+                // Reset form
+                document.getElementById('soil-assignment-title').value = '';
+                document.getElementById('soil-assignment-due').value = '';
+                document.getElementById('soil-assignment-desc').value = '';
+            });
+            
+            // Add Sustainable Development Assignment Form
+            document.getElementById('add-sust-assignment-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const title = document.getElementById('sust-assignment-title').value;
+                const dueDate = document.getElementById('sust-assignment-due').value;
+                const description = document.getElementById('sust-assignment-desc').value;
+                
+                addAssignment(title, dueDate, description, 'sustainable-dev');
+                
+                // Reset form
+                document.getElementById('sust-assignment-title').value = '';
+                document.getElementById('sust-assignment-due').value = '';
+                document.getElementById('sust-assignment-desc').value = '';
+            });
+        };
+    </script>
 </body>
 </html>
