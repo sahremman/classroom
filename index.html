@@ -1,32 +1,468 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>LocalStorage Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload Portal</title>
+    <style>
+        /* Basic styling */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        .upload-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .upload-section.drag-over {
+            background-color: #e9f7ef;
+            border-color: #28a745;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .file-list {
+            margin-top: 30px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 15px;
+            text-align: center;
+            line-height: 40px;
+            font-size: 20px;
+            background-color: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .file-info {
+            flex-grow: 1;
+        }
+        
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .file-size {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .file-actions {
+            margin-left: 10px;
+        }
+        
+        .delete-btn {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        
+        .delete-btn:hover {
+            background-color: #ff3333;
+        }
+        
+        .preview-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        
+        .preview-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        .file-preview {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .file-preview img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .file-preview iframe {
+            width: 100%;
+            height: 500px;
+            border: none;
+        }
+        
+        .no-files {
+            text-align: center;
+            color: #888;
+            margin-top: 20px;
+        }
+        
+        /* File type colors */
+        .pdf { background-color: #ff6b6b; color: white; }
+        .docx, .doc { background-color: #4285f4; color: white; }
+        .xlsx, .xls { background-color: #1e8e3e; color: white; }
+        .csv { background-color: #fbbc05; color: white; }
+        .jpg, .jpeg, .png, .gif { background-color: #9c27b0; color: white; }
+        .txt { background-color: #607d8b; color: white; }
+        
+        /* Loading spinner */
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .loading:after {
+            content: "";
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s ease infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <h1>LocalStorage Test</h1>
-    <button id="saveButton">Save Data</button>
-    <button id="loadButton">Load Data</button>
-    <p id="result"></p>
+    <div class="container">
+        <h1>File Upload Portal</h1>
+        
+        <div class="upload-section" id="drop-area">
+            <p>Drag and drop files here or</p>
+            <input type="file" id="file-input" multiple>
+            <button class="upload-btn" onclick="document.getElementById('file-input').click()">Select Files</button>
+            <div class="loading" id="loading-spinner"></div>
+        </div>
+        
+        <div class="file-list" id="file-list">
+            <p class="no-files" id="no-files-msg">No files uploaded yet</p>
+        </div>
+        
+        <div class="file-preview" id="file-preview">
+            <!-- File preview will be shown here -->
+        </div>
+    </div>
 
     <script>
-        document.getElementById('saveButton').addEventListener('click', function() {
-            try {
-                localStorage.setItem('testData', 'This is test data');
-                document.getElementById('result').textContent = "Data saved!";
-            } catch(e) {
-                document.getElementById('result').textContent = "Error: " + e.message;
-            }
+        // Store files in memory
+        let uploadedFiles = [];
+        
+        // DOM elements
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('file-input');
+        const fileList = document.getElementById('file-list');
+        const noFilesMsg = document.getElementById('no-files-msg');
+        const filePreview = document.getElementById('file-preview');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        
+        // Handle drag and drop events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
         });
-
-        document.getElementById('loadButton').addEventListener('click', function() {
-            try {
-                const data = localStorage.getItem('testData');
-                document.getElementById('result').textContent = "Data loaded: " + data;
-            } catch(e) {
-                document.getElementById('result').textContent = "Error: " + e.message;
-            }
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
         });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+        
+        function highlight() {
+            dropArea.classList.add('drag-over');
+        }
+        
+        function unhighlight() {
+            dropArea.classList.remove('drag-over');
+        }
+        
+        // Handle file drop
+        dropArea.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+        
+        // Handle file input change
+        fileInput.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+        
+        // Process the files
+        function handleFiles(files) {
+            loadingSpinner.style.display = 'block';
+            
+            // Convert FileList to Array
+            files = [...files];
+            
+            // Process each file
+            const promises = files.map(file => processFile(file));
+            
+            Promise.all(promises)
+                .then(() => {
+                    updateFileList();
+                    loadingSpinner.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error processing files:', error);
+                    loadingSpinner.style.display = 'none';
+                });
+        }
+        
+        // Process individual file
+        function processFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const fileData = {
+                        id: generateUniqueId(),
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        extension: getFileExtension(file.name),
+                        data: e.target.result,
+                        date: new Date()
+                    };
+                    
+                    uploadedFiles.push(fileData);
+                    resolve(fileData);
+                };
+                
+                reader.onerror = function(e) {
+                    console.error('File reading error:', e);
+                    reject(e);
+                };
+                
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // Update the file list display
+        function updateFileList() {
+            if (uploadedFiles.length === 0) {
+                noFilesMsg.style.display = 'block';
+                fileList.innerHTML = '';
+                return;
+            }
+            
+            noFilesMsg.style.display = 'none';
+            fileList.innerHTML = '';
+            
+            uploadedFiles.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.dataset.id = file.id;
+                
+                const icon = getFileIcon(file.extension);
+                const size = formatFileSize(file.size);
+                const date = file.date.toLocaleString();
+                
+                fileItem.innerHTML = `
+                    <div class="file-icon ${file.extension}">${icon}</div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${size} - Uploaded: ${date}</div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="preview-btn" onclick="previewFile('${file.id}')">Preview</button>
+                        <button class="delete-btn" onclick="deleteFile('${file.id}')">Delete</button>
+                    </div>
+                `;
+                
+                fileList.appendChild(fileItem);
+            });
+        }
+        
+        // Generate a unique ID for each file
+        function generateUniqueId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+        
+        // Get file extension
+        function getFileExtension(filename) {
+            return filename.split('.').pop().toLowerCase();
+        }
+        
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Get appropriate icon for file type
+        function getFileIcon(extension) {
+            switch(extension) {
+                case 'pdf': return 'PDF';
+                case 'doc':
+                case 'docx': return 'DOC';
+                case 'xls':
+                case 'xlsx': return 'XLS';
+                case 'csv': return 'CSV';
+                case 'jpg':
+                case 'jpeg':
+                case 'png':
+                case 'gif': return 'IMG';
+                case 'txt': return 'TXT';
+                default: return 'FILE';
+            }
+        }
+        
+        // Preview file
+        function previewFile(fileId) {
+            const file = uploadedFiles.find(f => f.id === fileId);
+            if (!file) return;
+            
+            filePreview.style.display = 'block';
+            filePreview.innerHTML = '';
+            
+            // Create preview based on file type
+            const extension = file.extension;
+            
+            if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
+                // Image preview
+                const img = document.createElement('img');
+                img.src = file.data;
+                img.alt = file.name;
+                filePreview.appendChild(img);
+            } else if (extension === 'pdf') {
+                // PDF preview
+                const iframe = document.createElement('iframe');
+                iframe.src = file.data;
+                filePreview.appendChild(iframe);
+            } else if (['csv', 'txt'].includes(extension)) {
+                // Text preview (for CSV and TXT)
+                fetch(file.data)
+                    .then(response => response.text())
+                    .then(text => {
+                        const pre = document.createElement('pre');
+                        pre.textContent = text;
+                        filePreview.appendChild(pre);
+                    })
+                    .catch(error => {
+                        console.error('Error loading text content:', error);
+                        filePreview.innerHTML = '<p>Cannot preview this file format</p>';
+                    });
+            } else {
+                // Generic download link for other file types
+                const link = document.createElement('a');
+                link.href = file.data;
+                link.download = file.name;
+                link.className = 'upload-btn';
+                link.textContent = 'Download ' + file.name;
+                
+                const message = document.createElement('p');
+                message.textContent = 'Preview not available for this file type. You can download it instead:';
+                
+                filePreview.appendChild(message);
+                filePreview.appendChild(link);
+            }
+            
+            // Add close button
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'upload-btn';
+            closeBtn.style.marginTop = '10px';
+            closeBtn.style.backgroundColor = '#888';
+            closeBtn.textContent = 'Close Preview';
+            closeBtn.onclick = function() {
+                filePreview.style.display = 'none';
+            };
+            
+            filePreview.appendChild(document.createElement('br'));
+            filePreview.appendChild(closeBtn);
+            
+            // Scroll to preview
+            filePreview.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Delete file
+        function deleteFile(fileId) {
+            if (!confirm('Are you sure you want to delete this file?')) return;
+            
+            uploadedFiles = uploadedFiles.filter(f => f.id !== fileId);
+            updateFileList();
+            
+            if (filePreview.style.display === 'block') {
+                filePreview.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>
