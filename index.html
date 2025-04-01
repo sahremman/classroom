@@ -1,69 +1,934 @@
-// Example code to modify the portal to use IndexedDB
-const DB_NAME = 'fileUploadDB';
-const STORE_NAME = 'files';
-let db;
-
-// Open the database
-function openDatabase() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload Portal - Enhanced Storage</title>
+    <style>
+        /* Basic styling */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
         
-        request.onupgradeneeded = function(event) {
-            db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1, h2, h3 {
+            color: #333;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .upload-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .upload-section.drag-over {
+            background-color: #e9f7ef;
+            border-color: #28a745;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+        
+        /* Two-column layout */
+        .content-wrapper {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        @media (min-width: 768px) {
+            .content-wrapper {
+                flex-direction: row;
+                gap: 20px;
             }
-        };
+            
+            .file-sidebar {
+                flex: 1;
+                max-width: 360px;
+            }
+            
+            .preview-panel {
+                flex: 2;
+            }
+        }
         
-        request.onsuccess = function(event) {
-            db = event.target.result;
-            resolve(db);
-        };
+        /* File list styling */
+        .file-sidebar {
+            margin-bottom: 20px;
+        }
         
-        request.onerror = function(event) {
-            reject('Error opening database: ' + event.target.errorCode);
-        };
-    });
-}
+        .file-list {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .file-list-header {
+            background-color: #f5f5f5;
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .file-item.active {
+            background-color: #e6f7ff;
+            border-left: 3px solid #1890ff;
+        }
+        
+        .file-icon {
+            width: 32px;
+            height: 32px;
+            margin-right: 12px;
+            text-align: center;
+            line-height: 32px;
+            font-size: 14px;
+            border-radius: 4px;
+        }
+        
+        .file-info {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .file-size {
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .action-btn {
+            background-color: transparent;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        
+        .action-btn:hover {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        
+        .delete-btn:hover {
+            color: #ff4d4d;
+        }
+        
+        .no-files {
+            text-align: center;
+            color: #888;
+            padding: 20px;
+        }
+        
+        /* Preview panel styling */
+        .preview-panel {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+        }
+        
+        .preview-header {
+            background-color: #f5f5f5;
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .preview-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .preview-content {
+            flex-grow: 1;
+            padding: 20px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f9f9f9;
+        }
+        
+        .preview-placeholder {
+            text-align: center;
+            color: #888;
+            font-size: 16px;
+        }
+        
+        .preview-content img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .preview-content iframe {
+            width: 100%;
+            height: 100%;
+            min-height: 450px;
+            border: none;
+        }
+        
+        .preview-content pre {
+            width: 100%;
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 450px;
+            overflow: auto;
+        }
+        
+        .preview-content .text-preview {
+            width: 100%;
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            line-height: 1.5;
+            max-height: 450px;
+            overflow: auto;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            padding: 8px 15px;
+            background-color: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .download-btn:hover {
+            background-color: #0c7cd5;
+        }
+        
+        /* File type colors */
+        .pdf { background-color: #ff6b6b; color: white; }
+        .docx, .doc { background-color: #4285f4; color: white; }
+        .xlsx, .xls { background-color: #1e8e3e; color: white; }
+        .csv { background-color: #fbbc05; color: white; }
+        .jpg, .jpeg, .png, .gif { background-color: #9c27b0; color: white; }
+        .txt { background-color: #607d8b; color: white; }
+        
+        /* Storage usage indicator */
+        .storage-info {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        
+        .storage-bar {
+            height: 8px;
+            background-color: #eee;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .storage-used {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+        }
+        
+        .clear-btn {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .clear-btn:hover {
+            background-color: #e68a00;
+        }
+        
+        /* Loading spinner */
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .loading:after {
+            content: "";
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s ease infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>File Upload Portal (IndexedDB Storage)</h1>
+        
+        <div class="upload-section" id="drop-area">
+            <p>Drag and drop files here or</p>
+            <input type="file" id="file-input" multiple>
+            <button class="upload-btn" onclick="document.getElementById('file-input').click()">Select Files</button>
+            <div class="loading" id="loading-spinner"></div>
+        </div>
+        
+        <div class="storage-info">
+            <div id="storage-text">Storage: 0 MB used (up to 250MB available with IndexedDB)</div>
+            <div class="storage-bar">
+                <div class="storage-used" id="storage-bar"></div>
+            </div>
+            <button class="clear-btn" onclick="clearAllFiles()">Clear All Files</button>
+        </div>
+        
+        <div class="content-wrapper">
+            <div class="file-sidebar">
+                <div class="file-list-header">
+                    Your Files
+                </div>
+                <div class="file-list" id="file-list">
+                    <p class="no-files" id="no-files-msg">No files uploaded yet</p>
+                </div>
+            </div>
+            
+            <div class="preview-panel">
+                <div class="preview-header">
+                    <h3 class="preview-title" id="preview-title">File Preview</h3>
+                    <div id="preview-actions"></div>
+                </div>
+                <div class="preview-content" id="preview-content">
+                    <div class="preview-placeholder">
+                        <p>Select a file to preview its contents</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-// Save files to IndexedDB
-function saveFiles() {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
+    <script>
+        // IndexedDB Configuration
+        const DB_NAME = 'FilePortalDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'files';
         
-        // Clear existing records
-        store.clear();
+        // Store files in memory during the session
+        let uploadedFiles = [];
+        let activeFileId = null;
+        let db = null;
         
-        // Add all files
-        uploadedFiles.forEach(file => {
-            store.add(file);
+        // Estimated max storage size (browser dependent)
+        const ESTIMATED_MAX_STORAGE = 250 * 1024 * 1024; // 250MB
+        
+        // DOM elements
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('file-input');
+        const fileList = document.getElementById('file-list');
+        const noFilesMsg = document.getElementById('no-files-msg');
+        const previewContent = document.getElementById('preview-content');
+        const previewTitle = document.getElementById('preview-title');
+        const previewActions = document.getElementById('preview-actions');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const storageText = document.getElementById('storage-text');
+        const storageBar = document.getElementById('storage-bar');
+        
+        // Initialize the database
+        function initDatabase() {
+            return new Promise((resolve, reject) => {
+                if (!window.indexedDB) {
+                    reject("Your browser doesn't support IndexedDB. Falling back to memory storage.");
+                    return;
+                }
+                
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = (event) => {
+                    console.error("Database error:", event.target.error);
+                    reject("Error opening database. Falling back to memory storage.");
+                };
+                
+                request.onsuccess = (event) => {
+                    console.log("Database opened successfully");
+                    db = event.target.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    console.log("Database upgrade needed");
+                    const db = event.target.result;
+                    
+                    // Create an object store if it doesn't exist
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                        store.createIndex('date', 'date', { unique: false });
+                        console.log("Object store created");
+                    }
+                };
+            });
+        }
+        
+        // Load files from IndexedDB
+        function loadFiles() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject("Database not initialized");
+                    return;
+                }
+                
+                try {
+                    const transaction = db.transaction([STORE_NAME], 'readonly');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const dateIndex = store.index('date');
+                    
+                    // Get all files sorted by date (newest first)
+                    const request = dateIndex.openCursor(null, 'prev');
+                    const files = [];
+                    
+                    request.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            files.push(cursor.value);
+                            cursor.continue();
+                        } else {
+                            uploadedFiles = files;
+                            updateFileList();
+                            updateStorageInfo();
+                            
+                            // Load the first file preview if available
+                            if (uploadedFiles.length > 0) {
+                                previewFile(uploadedFiles[0].id);
+                            }
+                            
+                            resolve(files);
+                        }
+                    };
+                    
+                    request.onerror = (event) => {
+                        console.error("Error loading files:", event.target.error);
+                        reject("Error loading files from database");
+                    };
+                } catch (error) {
+                    console.error("Transaction error:", error);
+                    reject("Error in database transaction");
+                }
+            });
+        }
+        
+        // Add a file to IndexedDB
+        function addFileToDb(file) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject("Database not initialized");
+                    return;
+                }
+                
+                try {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    
+                    const request = store.add(file);
+                    
+                    request.onsuccess = () => {
+                        resolve(file);
+                    };
+                    
+                    request.onerror = (event) => {
+                        console.error("Error adding file:", event.target.error);
+                        reject("Error saving file to database");
+                    };
+                } catch (error) {
+                    console.error("Transaction error:", error);
+                    reject("Error in database transaction");
+                }
+            });
+        }
+        
+        // Delete a file from IndexedDB
+        function deleteFileFromDb(fileId) {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject("Database not initialized");
+                    return;
+                }
+                
+                try {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    
+                    const request = store.delete(fileId);
+                    
+                    request.onsuccess = () => {
+                        resolve();
+                    };
+                    
+                    request.onerror = (event) => {
+                        console.error("Error deleting file:", event.target.error);
+                        reject("Error deleting file from database");
+                    };
+                } catch (error) {
+                    console.error("Transaction error:", error);
+                    reject("Error in database transaction");
+                }
+            });
+        }
+        
+        // Clear all files from IndexedDB
+        function clearFilesFromDb() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    reject("Database not initialized");
+                    return;
+                }
+                
+                try {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    
+                    const request = store.clear();
+                    
+                    request.onsuccess = () => {
+                        resolve();
+                    };
+                    
+                    request.onerror = (event) => {
+                        console.error("Error clearing files:", event.target.error);
+                        reject("Error clearing files from database");
+                    };
+                } catch (error) {
+                    console.error("Transaction error:", error);
+                    reject("Error in database transaction");
+                }
+            });
+        }
+        
+        // Update storage usage information
+        function updateStorageInfo() {
+            // Calculate current usage
+            let totalSize = 0;
+            uploadedFiles.forEach(file => {
+                totalSize += file.size;
+            });
+            
+            // Update display
+            const usageMB = (totalSize / (1024 * 1024)).toFixed(2);
+            storageText.textContent = `Storage: ${usageMB} MB used (up to 250MB available with IndexedDB)`;
+            
+            // Update progress bar
+            const percentage = Math.min((totalSize / ESTIMATED_MAX_STORAGE) * 100, 100);
+            storageBar.style.width = percentage + '%';
+            
+            // Change color based on usage
+            if (percentage > 90) {
+                storageBar.style.backgroundColor = '#ff4d4d'; // Red when almost full
+            } else if (percentage > 70) {
+                storageBar.style.backgroundColor = '#ffeb3b'; // Yellow when getting high
+            } else {
+                storageBar.style.backgroundColor = '#4CAF50'; // Green when ok
+            }
+        }
+        
+        // Clear all files
+        function clearAllFiles() {
+            if (!confirm('Are you sure you want to delete ALL files? This cannot be undone.')) return;
+            
+            clearFilesFromDb()
+                .then(() => {
+                    uploadedFiles = [];
+                    updateFileList();
+                    showEmptyPreview();
+                    updateStorageInfo();
+                })
+                .catch(error => {
+                    console.error("Error clearing files:", error);
+                    alert("Error clearing files: " + error);
+                });
+        }
+        
+        // Handle drag and drop events
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
         });
         
-        transaction.oncomplete = function() {
-            resolve();
-        };
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         
-        transaction.onerror = function(event) {
-            reject('Error saving files: ' + event.target.errorCode);
-        };
-    });
-}
-
-// Load files from IndexedDB
-function loadFiles() {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.getAll();
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
         
-        request.onsuccess = function() {
-            uploadedFiles = request.result;
-            resolve(uploadedFiles);
-        };
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
         
-        request.onerror = function(event) {
-            reject('Error loading files: ' + event.target.errorCode);
-        };
-    });
-}
+        function highlight() {
+            dropArea.classList.add('drag-over');
+        }
+        
+        function unhighlight() {
+            dropArea.classList.remove('drag-over');
+        }
+        
+        // Handle file drop
+        dropArea.addEventListener('drop', handleDrop, false);
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+        
+        // Handle file input change
+        fileInput.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+        
+        // Process the files
+        function handleFiles(files) {
+            loadingSpinner.style.display = 'block';
+            
+            // Convert FileList to Array
+            files = [...files];
+            
+            // Process each file
+            const promises = files.map(file => processFile(file));
+            
+            Promise.all(promises)
+                .then(newFiles => {
+                    // Filter out null values (files that were skipped)
+                    const validFiles = newFiles.filter(file => file !== null);
+                    
+                    if (validFiles.length > 0) {
+                        // Save to database and update memory
+                        const dbPromises = validFiles.map(file => addFileToDb(file));
+                        
+                        Promise.all(dbPromises)
+                            .then(() => {
+                                // Update UI
+                                loadFiles();
+                                
+                                // Preview the last uploaded file
+                                if (validFiles.length > 0) {
+                                    previewFile(validFiles[validFiles.length - 1].id);
+                                }
+                                
+                                loadingSpinner.style.display = 'none';
+                            })
+                            .catch(error => {
+                                console.error("Error adding files to database:", error);
+                                alert("Error saving files: " + error);
+                                loadingSpinner.style.display = 'none';
+                            });
+                    } else {
+                        loadingSpinner.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error processing files:', error);
+                    loadingSpinner.style.display = 'none';
+                    alert('Error processing files: ' + error);
+                });
+        }
+        
+        // Process individual file
+        function processFile(file) {
+            return new Promise((resolve, reject) => {
+                // Skip files that are too large (individual file limit - adjust as needed)
+                const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB per file
+                if (file.size > MAX_FILE_SIZE) {
+                    alert(`File ${file.name} exceeds the 20MB limit per file and will be skipped.`);
+                    resolve(null);
+                    return;
+                }
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const fileData = {
+                        id: generateUniqueId(),
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        extension: getFileExtension(file.name),
+                        data: e.target.result,
+                        date: new Date().toISOString() // Store as string for JSON compatibility
+                    };
+                    
+                    resolve(fileData);
+                };
+                
+                reader.onerror = function(e) {
+                    console.error('File reading error:', e);
+                    reject('Error reading file: ' + file.name);
+                };
+                
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // Update the file list display
+        function updateFileList() {
+            if (uploadedFiles.length === 0) {
+                noFilesMsg.style.display = 'block';
+                fileList.innerHTML = '';
+                return;
+            }
+            
+            noFilesMsg.style.display = 'none';
+            fileList.innerHTML = '';
+            
+            uploadedFiles.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                if (file.id === activeFileId) {
+                    fileItem.classList.add('active');
+                }
+                fileItem.dataset.id = file.id;
+                
+                const icon = getFileIcon(file.extension);
+                const size = formatFileSize(file.size);
+                
+                fileItem.innerHTML = `
+                    <div class="file-icon ${file.extension}">${icon}</div>
+                    <div class="file-info" onclick="previewFile('${file.id}')">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${size}</div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="action-btn delete-btn" title="Delete" onclick="deleteFile('${file.id}')">🗑️</button>
+                    </div>
+                `;
+                
+                fileList.appendChild(fileItem);
+            });
+        }
+        
+        // Show empty preview
+        function showEmptyPreview() {
+            activeFileId = null;
+            previewTitle.textContent = 'File Preview';
+            previewActions.innerHTML = '';
+            previewContent.innerHTML = `
+                <div class="preview-placeholder">
+                    <p>Select a file to preview its contents</p>
+                </div>
+            `;
+        }
+        
+        // Preview file
+        function previewFile(fileId) {
+            const file = uploadedFiles.find(f => f.id === fileId);
+            if (!file) return;
+            
+            // Update active file
+            activeFileId = file.id;
+            updateFileList();
+            
+            // Update preview header
+            previewTitle.textContent = file.name;
+            previewActions.innerHTML = `
+                <a href="${file.data}" download="${file.name}" class="download-btn">Download</a>
+            `;
+            
+            // Clear previous preview
+            previewContent.innerHTML = '';
+            
+            // Create preview based on file type
+            const extension = file.extension;
+            
+            if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) {
+                // Image preview
+                const img = document.createElement('img');
+                img.src = file.data;
+                img.alt = file.name;
+                previewContent.appendChild(img);
+            } else if (extension === 'pdf') {
+                // PDF preview
+                const iframe = document.createElement('iframe');
+                iframe.src = file.data;
+                previewContent.appendChild(iframe);
+            } else if (['csv', 'txt'].includes(extension)) {
+                // Text preview (for CSV and TXT)
+                fetch(file.data)
+                    .then(response => response.text())
+                    .then(text => {
+                        const pre = document.createElement('pre');
+                        pre.textContent = text;
+                        previewContent.appendChild(pre);
+                    })
+                    .catch(error => {
+                        console.error('Error loading text content:', error);
+                        previewContent.innerHTML = '<p>Cannot preview this file format</p>';
+                    });
+            } else if (['doc', 'docx'].includes(extension)) {
+                // Simple text preview for Word documents
+                previewContent.innerHTML = `
+                    <div class="text-preview">
+                        <h3>Document Preview (${file.name})</h3>
+                        <p>This is a Microsoft Word document. Full preview is not available in browser.</p>
+                        <p>Document size: ${formatFileSize(file.size)}</p>
+                        <p>Upload date: ${new Date(file.date).toLocaleString()}</p>
+                        <p>Please use the Download button to open the file in Microsoft Word or another compatible application.</p>
+                    </div>
+                `;
+            } else if (['xls', 'xlsx'].includes(extension)) {
+                // Simple text preview for Excel files
+                previewContent.innerHTML = `
+                    <div class="text-preview">
+                        <h3>Spreadsheet Preview (${file.name})</h3>
+                        <p>This is a Microsoft Excel spreadsheet. Full preview is not available in browser.</p>
+                        <p>File size: ${formatFileSize(file.size)}</p>
+                        <p>Upload date: ${new Date(file.date).toLocaleString()}</p>
+                        <p>Please use the Download button to open the file in Microsoft Excel or another compatible application.</p>
+                    </div>
+                `;
+            } else {
+                // Generic message for other file types
+                previewContent.innerHTML = `
+                    <div class="text-preview">
+                        <h3>File Preview (${file.name})</h3>
+                        <p>Preview is not available for this file type.</p>
+                        <p>File type: ${file.type || 'Unknown'}</p>
+                        <p>Size: ${formatFileSize(file.size)}</p>
+                        <p>Upload date: ${new Date(file.date).toLocaleString()}</p>
+                        <p>Please use the Download button to open this file with an appropriate application.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Delete file
+        function deleteFile(fileId) {
+            if (!confirm('Are you sure you want to delete this file?')) return;
+            
+            // Check if the file to delete is currently active
+            const isActiveFile = activeFileId === fileId;
+            
+            // Remove the file from DB
+            deleteFileFromDb(fileId)
+                .then(() => {
+                    // Remove from memory too
+                    uploadedFiles = uploadedFiles.filter(f => f.id !== fileId);
+                    
+                    // Update the UI
+                    updateFileList();
+                    updateStorageInfo();
+                    
+                    // If we deleted the active file, show empty preview or next file
+                    if (isActiveFile) {
+                        if (uploadedFiles.length > 0) {
+                            previewFile(uploadedFiles[0].id);
+                        } else {
+                            showEmptyPreview();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Error deleting file:", error);
+                    alert("Error deleting file: " + error);
+                });
+        }
+        
+        // Generate a unique ID for each file
+        function generateUniqueId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+        
+        // Get file extension
+        function getFileExtension(filename) {
+            return filename.split('.').pop().toLowerCase();
+        }
+        
+        // Format file size
+        function formatFileSize
